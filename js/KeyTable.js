@@ -690,7 +690,7 @@ function KeyTable ( oInit )
 				y = _iOldY;
 				break;
 			
-			case -1:
+			case -1: /* shift+tab */
 			case 37: /* left arrow */
 				if ( _iOldX > 0 ) {
 					x = _iOldX - 1;
@@ -699,7 +699,16 @@ function KeyTable ( oInit )
 					x = iTableWidth-1;
 					y = _iOldY - 1;
 				} else {
-					/* at start of table */
+					/* try to move to previous table */
+					if(spreadStatementInstance && spreadStatementInstance.moveToNextKeyTable){
+						x = iTableWidth-1;
+						if(spreadStatementInstance.moveToNextKeyTable(oSettings.sTableId, x, null, false)){
+							_fnBlur();
+							e.stopImmediatePropagation();
+						}
+						return false;
+					}
+					/* at start of first table */
 					if ( iKey == -1 && _bForm )
 					{
 						/* If we are in a form, return focus to the 'input' element such that tabbing will
@@ -728,6 +737,14 @@ function KeyTable ( oInit )
 					x = _iOldX;
 					y = _iOldY - 1;
 				} else {
+					/* try to move to previous table */
+					if(spreadStatementInstance && spreadStatementInstance.moveToNextKeyTable){
+						x = _iOldX;
+						if(spreadStatementInstance.moveToNextKeyTable(oSettings.sTableId, x, null, false)){
+							_fnBlur();
+							e.stopImmediatePropagation();
+						}
+					}
 					return false;
 				}
 				break;
@@ -741,7 +758,17 @@ function KeyTable ( oInit )
 					x = 0;
 					y = _iOldY + 1;
 				} else {
-					/* at end of table */
+					/* try to move to next table */
+					if(spreadStatementInstance && spreadStatementInstance.moveToNextKeyTable){
+						x = 0;
+						y = 0;
+						if(spreadStatementInstance.moveToNextKeyTable(oSettings.sTableId, x, y, true)){
+							_fnBlur();
+							e.stopImmediatePropagation();
+						}
+						return false;
+					}
+					/* at end of last table */
 					if ( iKey == 9 && _bForm )
 					{
 						/* If we are in a form, return focus to the 'input' element such that tabbing will
@@ -770,6 +797,15 @@ function KeyTable ( oInit )
 					x = _iOldX;
 					y = _iOldY + 1;
 				} else {
+					/* try to move to next table */
+					if(spreadStatementInstance && spreadStatementInstance.moveToNextKeyTable){
+						x = _iOldX;
+						y = 0;
+						if(spreadStatementInstance.moveToNextKeyTable(oSettings.sTableId, x, y, true)) {
+							_fnBlur();
+							e.stopImmediatePropagation();
+						}
+					}
 					return false;
 				}
 				break;
@@ -1070,30 +1106,9 @@ function KeyTable ( oInit )
 			_fnCaptureKeys();
 		}
 		
-		/*
-		 * Add event listeners
-		 * Well - I hate myself for doing this, but it would appear that key events in browsers are
-		 * a complete mess, particulay when you consider arrow keys, which of course are one of the
-		 * main areas of interest here. So basically for arrow keys, there is no keypress event in
-		 * Safari and IE, while there is in Firefox and Opera. But Firefox and Opera don't repeat the
-		 * keydown event for an arrow key. OUCH. See the following two articles for more:
-		 *   http://www.quirksmode.org/dom/events/keys.html
-		 *   https://lists.webkit.org/pipermail/webkit-dev/2007-December/002992.html
-		 *   http://unixpapa.com/js/key.html
-		 * PPK considers the IE / Safari method correct (good enough for me!) so we (urgh) detect
-		 * Mozilla and Opera and apply keypress for them, while everything else gets keydown. If
-		 * Mozilla or Opera change their implemention in future, this will need to be updated... 
-		 * although at the time of writing (14th March 2009) Minefield still uses the 3.0 behaviour.
-		 */
-		if ( jQuery.browser.mozilla || jQuery.browser.opera )
-		{
-			jQuery(document).bind( "keypress", _fnKey );
-		}
-		else
-		{
-			jQuery(document).bind( "keydown", _fnKey );
-		}
-		
+		/* replacing browser detection logic with the event listener used in KeyTable 1.2 */
+		jQuery(document).bind( "keydown", _fnKey );
+
 		if ( _oDatatable )
 		{
 			jQuery(_oDatatable.fnSettings().nTable).delegate('tbody td', 'click', _fnClick);
